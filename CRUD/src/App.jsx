@@ -74,6 +74,26 @@ function App() {
     }
   };
 
+  const handleEdit = (product) => {
+    setForm({ name: product.name, price: product.price });
+    setEditing(product); // Define o estado de edição com o produto atual
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Tem certeza que deseja deletar este produto?")) {
+      return; // Se o usuário cancelar, não faz nada
+    }
+
+    try {
+      await api.delete(`/products/${id}`);
+      alert("Produto deletado com sucesso!");
+      fetchProducts(); // Atualiza a lista de produtos
+    } catch (error) {
+      console.error("Erro ao deletar produto:", error);
+      alert("Ocorreu um erro ao deletar. Tente novamente.");
+    }
+  };
+
   return (
     <>
       <header className="App-header">
