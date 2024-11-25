@@ -1,89 +1,74 @@
-const express = require("express");
-const mysql = require("mysql2");
-const cors = require("cors");
-const bodyParser = require("body-parser");
+const express = require('express');
+const bodyParser = require('body-parser');
+const cors = require('cors'); // Importa o pacote cors
 
 const app = express();
-const PORT = 5000;
+const port = 3000;
 
-app.use(cors());
+// Middleware para processar JSON
 app.use(bodyParser.json());
 
-const db = mysql.createConnection({
-  host: "localhost",
-  user: "root",
-  password: "4512",
-  database: "crud_db",
+// Middleware para permitir CORS
+app.use(cors()); // Habilita CORS para todas as origens
+
+// Dados iniciais
+let festas = [];
+
+// Rotas
+app.get('/viewfestas', (req, res) => {
+  res.json(festas);
 });
 
-// Conexão com o banco de dados
-db.connect((err) => {
-  if (err) {
-    console.error("Erro ao conectar ao banco de dados:", err);
-    process.exit(1);
+app.post('/festas', (req, res) => {
+  const { nome, data, local, valorIngresso } = req.body;
+
+  if (!nome || !data || !local || !valorIngresso) {
+    return res.status(400).json({ error: 'Todos os campos são obrigatórios: nome, data, local, valorIngresso' });
   }
-  console.log("Conectado ao MySQL!");
+
+  const novaFesta = {
+    id: festas.length + 1,
+    nome,
+    data,
+    local,
+    valorIngresso,
+  };
+
+  festas.push(novaFesta);
+  res.status(201).json(novaFesta);
 });
 
-// Rotas do CRUD
-app.get("/products", (req, res) => {
-  const query = "SELECT * FROM products";
-  db.query(query, (err, results) => {
-    if (err) return res.status(500).send(err.message);
-    res.json(results);
-  });
-});
-
-app.post("/products", (req, res) => {
-  const { name, price, description } = req.body;
-  const query = "INSERT INTO products (name, price, description) VALUES (?, ?, ?)";
-  db.query(query, [name, price, description], (err, results) => {
-    if (err) return res.status(500).send(err.message);
-    res.status(201).json({ id: results.insertId, name, price, description });
-  });
-});
-
-app.put("/products/:id", (req, res) => {
+app.put('/festas/:id', (req, res) => {
   const { id } = req.params;
-  const { name, price, description } = req.body;
-  const query = "UPDATE products SET name = ?, price = ?, description = ? WHERE id = ?";
-  db.query(query, [name, price, description, id], (err, results) => {
-    if (err) return res.status(500).send(err.message);
-    res.json({ id, name, price, description });
-  });
+  const { nome, data, local, valorIngresso } = req.body;
+
+  const festa = festas.find((f) => f.id === parseInt(id));
+
+  if (!festa) {
+    return res.status(404).json({ error: 'Festa não encontrada' });
+  }
+
+  if (nome) festa.nome = nome;
+  if (data) festa.data = data;
+  if (local) festa.local = local;
+  if (valorIngresso) festa.valorIngresso = valorIngresso;
+
+  res.json(festa);
 });
 
-app.delete("/products/:id", (req, res) => {
+app.delete('/festas/:id', (req, res) => {
   const { id } = req.params;
-  const query = "DELETE FROM products WHERE id = ?";
-  db.query(query, [id], (err, results) => {
-    if (err) return res.status(500).send(err.message);
-    res.json({ deleted: results.affectedRows });
-  });
+  const index = festas.findIndex((f) => f.id === parseInt(id));
+
+  if (index === -1) {
+    return res.status(404).json({ error: 'Festa não encontrada' });
+  }
+
+  festas.splice(index, 1);
+  res.status(204).send();
 });
 
-// Buscar produto por ID
-app.get("/products/:id", (req, res) => {
-  const { id } = req.params;
-  const query = "SELECT * FROM products WHERE id = ?";
-  db.query(query, [id], (err, results) => {
-    if (err) return res.status(500).send(err.message);
-    if (results.length === 0) return res.status(404).send("Produto não encontrado");
-    res.json(results[0]);
-  });
+// Iniciar o servidor
+app.listen(port, () => {
+  console.log(`Servidor rodando em http://localhost:${port}`);
 });
-
-// Buscar produtos por nome
-app.get("/products/search/:name", (req, res) => {
-  const { name } = req.params;
-  const query = "SELECT * FROM products WHERE name LIKE ?";
-  db.query(query, [`%${name}%`], (err, results) => {
-    if (err) return res.status(500).send(err.message);
-    res.json(results);
-  });
-});
-
-
-app.listen(PORT, () =>
-  console.log(`Servidor rodando em http://localhost:${PORT}`)
-);

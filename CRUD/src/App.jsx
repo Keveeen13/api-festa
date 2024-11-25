@@ -1,95 +1,90 @@
 import { useState, useEffect } from "react";
 import "./App.css";
 import axios from "axios";
+import InputMask from "react-input-mask";
 
 const api = axios.create({
-  baseURL: "http://localhost:5000",
+  baseURL: "http://localhost:3000", // Porta do backend de festas
 });
 
 function App() {
-  const [products, setProducts] = useState([]);
-  const [form, setForm] = useState({ name: "", price: "" });
+  const [festas, setFestas] = useState([]);
+  const [form, setForm] = useState({
+    nome: "",
+    data: "",
+    local: "",
+    valorIngresso: "",
+  });
   const [editing, setEditing] = useState(null);
-  const [search, setSearch] = useState(""); // Para armazenar a busca
-  const [searchResults, setSearchResults] = useState([]); // Resultados da busca
 
-  // Fetch products from API
+  // Fetch festas from API
   useEffect(() => {
-    fetchProducts();
+    fetchFestas();
   }, []);
 
-  const fetchProducts = async () => {
+  const fetchFestas = async () => {
     try {
-      const response = await api.get("/products");
-      setProducts(response.data);
+      const response = await api.get("/viewfestas");
+      setFestas(response.data);
     } catch (error) {
-      console.error("Erro ao buscar produtos:", error);
-    }
-  };
-
-  const handleSearchById = async () => {
-    if (!search) return alert("Digite um ID para buscar!");
-    try {
-      const response = await api.get(`/products/${search}`);
-      setSearchResults([response.data]); // Retorna um único produto
-    } catch (error) {
-      console.error("Erro ao buscar produto:", error);
-    }
-  };
-
-  const handleSearchByName = async () => {
-    if (!search) return alert("Digite um nome para buscar!");
-    try {
-      const response = await api.get(`/products/search/${search}`);
-      setSearchResults(response.data); // Retorna uma lista de produtos
-    } catch (error) {
-      console.error("Erro ao buscar produtos:", error);
+      console.error("Erro ao buscar festas:", error);
     }
   };
 
   const handleCreate = async (e) => {
-    e.preventDefault(); // Evita o comportamento padrão de recarregar a página
+    e.preventDefault();
 
-    if (!form.name || !form.price) {
+    if (!form.nome || !form.data || !form.local || !form.valorIngresso) {
       return alert("Por favor, preencha todos os campos.");
     }
 
     try {
+      const valorSemMascara = form.valorIngresso.replace(/[^\d,]/g, "").replace(",", ".");
+      const dados = {
+        ...form,
+        valorIngresso: parseFloat(valorSemMascara),
+      };
+
       if (editing) {
-        // Atualizar produto existente
-        await api.put(`/products/${editing.id}`, form);
-        alert("Produto atualizado com sucesso!");
-        setEditing(null); // Limpa o estado de edição
+        // Atualizar festa existente
+        await api.put(`/festas/${editing.id}`, dados);
+        alert("Festa atualizada com sucesso!");
+        setEditing(null);
       } else {
-        // Criar novo produto
-        await api.post("/products", form);
-        alert("Produto criado com sucesso!");
+        // Criar nova festa
+        await api.post("/festas", dados);
+        alert("Festa criada com sucesso!");
       }
 
-      setForm({ name: "", price: "" }); // Reseta o formulário
-      fetchProducts(); // Atualiza a lista de produtos
+      setForm({ nome: "", data: "", local: "", valorIngresso: "" });
+      fetchFestas();
     } catch (error) {
-      console.error("Erro ao criar ou atualizar produto:", error);
+      console.error("Erro ao criar ou atualizar festa:", error);
       alert("Ocorreu um erro. Tente novamente.");
     }
   };
 
-  const handleEdit = (product) => {
-    setForm({ name: product.name, price: product.price });
-    setEditing(product); // Define o estado de edição com o produto atual
+  const handleEdit = (festa) => {
+    setForm({
+      nome: festa.nome,
+      data: festa.data,
+      local: festa.local,
+      valorIngresso: festa.valorIngresso,
+    });
+    setEditing(festa);
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Tem certeza que deseja deletar este produto?")) {
-      return; // Se o usuário cancelar, não faz nada
+    if (!window.confirm("Tem certeza que deseja deletar esta festa?")) {
+      return;
     }
 
     try {
-      await api.delete(`/products/${id}`);
-      alert("Produto deletado com sucesso!");
-      fetchProducts(); // Atualiza a lista de produtos
+      await api.delete(`/festas/${id}`);
+      alert("Festa deletada com sucesso!");
+      fetchFestas();
     } catch (error) {
-      console.error("Erro ao deletar produto:", error);
+      console.error("Erro ao deletar festa:", error);
       alert("Ocorreu um erro ao deletar. Tente novamente.");
     }
   };
@@ -97,77 +92,62 @@ function App() {
   return (
     <>
       <header className="App-header">
-        <h1>CRUD de Produtos</h1>
+        <h1>CRUD de Festas</h1>
       </header>
 
       <main className="App-main">
         <div className="App-container">
-          {/* Campo de busca */}
-          <div className="App-search">
-            <input
-              type="text"
-              placeholder="Buscar por ID ou Nome"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <button onClick={handleSearchById}>Buscar por ID</button>
-            <button onClick={handleSearchByName}>Buscar por Nome</button>
+          {/* Criar ou Editar Festa */}
+          <div className="card-product App-card-create-festa">
+            <h2>{editing ? "Editar Festa" : "Criar Festa"}</h2>
+            <form onSubmit={handleCreate}>
+              <input
+                type="text"
+                placeholder="Nome"
+                value={form.nome}
+                onChange={(e) => setForm({ ...form, nome: e.target.value })}
+              />
+              <InputMask
+                mask="99/99/9999" // Máscara para data (DD/MM/YYYY)
+                placeholder="Data (DD/MM/AAAA)"
+                value={form.data}
+                onChange={(e) => setForm({ ...form, data: e.target.value })}
+              />
+              <input
+                type="text"
+                placeholder="Local"
+                value={form.local}
+                onChange={(e) => setForm({ ...form, local: e.target.value })}
+              />
+              <InputMask
+                mask="R$ 999,99" // Máscara para valor
+                placeholder="Valor do Ingresso (R$)"
+                value={form.valorIngresso}
+                onChange={(e) =>
+                  setForm({ ...form, valorIngresso: e.target.value })
+                }
+              />
+              <button type="submit">{editing ? "Salvar" : "Criar"}</button>
+            </form>
           </div>
 
-          {/* Resultados da busca */}
-          {searchResults.length > 0 && (
-            <div className="App-search-results">
-              <h2>Resultados da Busca</h2>
-              <ul>
-                {searchResults.map((product) => (
-                  <li key={product.id}>
-                    <strong>{product.name}</strong> - R$ {product.price}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          <div className="modals">
-            {/* Criar ou Editar Produto */}
-            <div className="card-product App-card-create-product">
-              <h2>{editing ? "Editar Produto" : "Criar Produto"}</h2>
-              <form onSubmit={handleCreate}>
-                <input
-                  type="text"
-                  placeholder="Nome"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                />
-                <input
-                  type="text"
-                  placeholder="Preço"
-                  value={form.price}
-                  onChange={(e) => setForm({ ...form, price: e.target.value })}
-                />
-                <button type="submit">{editing ? "Salvar" : "Criar"}</button>
-              </form>
-            </div>
-
-            {/* Lista de Produtos */}
-            <div className="card-product App-card-list-products">
-              <h2>Lista de Produtos</h2>
-              <ul>
-                {products.map((product) => (
-                  <li key={product.id}>
-                    <strong>{product.name}</strong> - R$ {product.price}
-                    <div>
-                      <button onClick={() => handleEdit(product)}>
-                        Editar
-                      </button>
-                      <button onClick={() => handleDelete(product.id)}>
-                        Deletar
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          {/* Lista de Festas */}
+          <div className="card-product App-card-list-festas">
+            <h2>Lista de Festas</h2>
+            <ul>
+              {festas.map((festa) => (
+                <li key={festa.id}>
+                  <strong>{festa.nome}</strong> - {festa.data} - {festa.local} -
+                  R$ {festa.valorIngresso}
+                  <div>
+                    <button onClick={() => handleEdit(festa)}>Editar</button>
+                    <button onClick={() => handleDelete(festa.id)}>
+                      Deletar
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </main>
