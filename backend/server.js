@@ -19,6 +19,16 @@ app.get('/viewfestas', (req, res) => {
   res.json(festas);
 });
 
+app.get('/viewfestas/:id', (req, res) => {
+  const id = req.params.id;
+  const festa = festas.find(festa => festa.id === parseInt(id));
+  if (festa) {
+    return res.json(festa); // Adicionado return para evitar continuar
+  }
+  res.status(404).json({ mensagem: 'Festa não encontrada' });
+});
+
+
 app.post('/festas', (req, res) => {
   const { nome, data, local, valorIngresso } = req.body;
 
