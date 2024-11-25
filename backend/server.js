@@ -1,5 +1,5 @@
 const express = require("express");
-const mysql = require("mysql");
+const mysql = require("mysql2");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 
@@ -61,6 +61,28 @@ app.delete("/products/:id", (req, res) => {
     res.json({ deleted: results.affectedRows });
   });
 });
+
+// Buscar produto por ID
+app.get("/products/:id", (req, res) => {
+  const { id } = req.params;
+  const query = "SELECT * FROM products WHERE id = ?";
+  db.query(query, [id], (err, results) => {
+    if (err) return res.status(500).send(err.message);
+    if (results.length === 0) return res.status(404).send("Produto não encontrado");
+    res.json(results[0]);
+  });
+});
+
+// Buscar produtos por nome
+app.get("/products/search/:name", (req, res) => {
+  const { name } = req.params;
+  const query = "SELECT * FROM products WHERE name LIKE ?";
+  db.query(query, [`%${name}%`], (err, results) => {
+    if (err) return res.status(500).send(err.message);
+    res.json(results);
+  });
+});
+
 
 app.listen(PORT, () =>
   console.log(`Servidor rodando em http://localhost:${PORT}`)
